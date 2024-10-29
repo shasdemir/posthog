@@ -1098,6 +1098,7 @@ export interface EventDefinitionType {
     volume_30_day: number | null
     query_usage_30_day: number | null
     team_id: number
+    project_id: number | null
     last_seen_at: string // DateTime
     created_at: string // DateTime
 }
@@ -1137,6 +1138,7 @@ export interface PropertyDefinitionType {
     volume_30_day: number | null
     query_usage_30_day: number | null
     team_id: number
+    project_id: number | null
     property_type?: PropertyType
     type: PropertyDefinitionTypeEnum
     group_type_index: number | null
@@ -1147,6 +1149,7 @@ export interface EventPropertyType {
     event: string
     property: string
     team_id: number
+    project_id: number | null
 }
 
 export type PluginFunction = 'onEvent' | 'processEvent' | 'pluginTask'
