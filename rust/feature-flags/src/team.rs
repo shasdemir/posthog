@@ -11,6 +11,8 @@ pub const TEAM_TOKEN_CACHE_PREFIX: &str = "posthog:1:team_token:";
 #[derive(Clone, Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Team {
     pub id: i32,
+    /// Currently optional as we don't have a guarantee entries that cached in Redis have `project_id`
+    pub project_id: Option<i32>,
     pub name: String,
     pub api_token: String,
     // TODO: the following fields are used for the `/decide` response,
@@ -78,7 +80,7 @@ impl Team {
     ) -> Result<Team, FlagError> {
         let mut conn = client.get_connection().await?;
 
-        let query = "SELECT id, name, api_token FROM posthog_team WHERE api_token = $1";
+        let query = "SELECT id, project_id, name, api_token FROM posthog_team WHERE api_token = $1";
         let row = sqlx::query_as::<_, Team>(query)
             .bind(&token)
             .fetch_one(&mut *conn)
@@ -146,6 +148,7 @@ mod tests {
         let token = random_string("phc_", 12);
         let team = Team {
             id,
+            project_id: Some(id),
             name: "team".to_string(),
             api_token: token,
         };

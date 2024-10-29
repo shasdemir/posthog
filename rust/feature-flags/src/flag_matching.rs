@@ -65,7 +65,7 @@ pub struct GroupTypeMapping {
 /// These mappings are ingested via the plugin server.
 #[derive(Clone)]
 pub struct GroupTypeMappingCache {
-    team_id: TeamId,
+    project_id: TeamId,
     failed_to_fetch_flags: bool,
     group_types_to_indexes: HashMap<String, GroupTypeIndex>,
     group_indexes_to_types: HashMap<GroupTypeIndex, String>,
@@ -73,9 +73,9 @@ pub struct GroupTypeMappingCache {
 }
 
 impl GroupTypeMappingCache {
-    pub fn new(team_id: TeamId, postgres_reader: PostgresReader) -> Self {
+    pub fn new(project_id: TeamId, postgres_reader: PostgresReader) -> Self {
         GroupTypeMappingCache {
-            team_id,
+            project_id,
             failed_to_fetch_flags: false,
             group_types_to_indexes: HashMap::new(),
             group_indexes_to_types: HashMap::new(),
@@ -94,9 +94,9 @@ impl GroupTypeMappingCache {
             return Ok(self.group_types_to_indexes.clone());
         }
 
-        let team_id = self.team_id;
+        let project_id = self.project_id;
         let mapping = match self
-            .fetch_group_type_mapping(self.postgres_reader.clone(), team_id)
+            .fetch_group_type_mapping(self.postgres_reader.clone(), project_id)
             .await
         {
             Ok(mapping) if !mapping.is_empty() => mapping,
@@ -138,18 +138,18 @@ impl GroupTypeMappingCache {
     async fn fetch_group_type_mapping(
         &mut self,
         postgres_reader: PostgresReader,
-        team_id: TeamId,
+        project_id: TeamId,
     ) -> Result<HashMap<String, GroupTypeIndex>, FlagError> {
         let mut conn = postgres_reader.as_ref().get_connection().await?;
 
         let query = r#"
             SELECT group_type, group_type_index 
             FROM posthog_grouptypemapping 
-            WHERE team_id = $1
+            WHERE project_id = $1
         "#;
 
         let rows = sqlx::query_as::<_, GroupTypeMapping>(query)
-            .bind(team_id)
+            .bind(project_id)
             .fetch_all(&mut *conn)
             .await?;
 
@@ -193,6 +193,7 @@ impl FeatureFlagMatcher {
     pub fn new(
         distinct_id: String,
         team_id: TeamId,
+        project_id: TeamId,
         postgres_reader: PostgresReader,
         postgres_writer: PostgresWriter,
         group_type_mapping_cache: Option<GroupTypeMappingCache>,
@@ -205,7 +206,7 @@ impl FeatureFlagMatcher {
             postgres_reader: postgres_reader.clone(),
             postgres_writer: postgres_writer.clone(),
             group_type_mapping_cache: group_type_mapping_cache
-                .unwrap_or_else(|| GroupTypeMappingCache::new(team_id, postgres_reader.clone())),
+                .unwrap_or_else(|| GroupTypeMappingCache::new(project_id, postgres_reader.clone())),
             properties_cache: properties_cache.unwrap_or_default(),
             groups: groups.unwrap_or_default(),
         }

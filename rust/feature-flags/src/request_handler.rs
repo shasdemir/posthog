@@ -65,6 +65,7 @@ pub struct RequestContext {
 #[builder(setter(into))]
 pub struct FeatureFlagEvaluationContext {
     team_id: i32,
+    project_id: i32,
     distinct_id: String,
     feature_flags: FeatureFlagList,
     postgres_reader: Arc<dyn Client + Send + Sync>,
@@ -98,6 +99,7 @@ pub async fn process_request(context: RequestContext) -> Result<FlagsResponse, F
     let distinct_id = request.extract_distinct_id()?;
     let groups = request.groups.clone();
     let team_id = team.id;
+    let project_id = team.project_id;
     let person_property_overrides = get_person_property_overrides(
         !request.geoip_disable.unwrap_or(false),
         request.person_properties.clone(),
@@ -116,6 +118,7 @@ pub async fn process_request(context: RequestContext) -> Result<FlagsResponse, F
 
     let evaluation_context = FeatureFlagEvaluationContextBuilder::default()
         .team_id(team_id)
+        .project_id(project_id)
         .distinct_id(distinct_id)
         .feature_flags(feature_flags_from_cache_or_pg)
         .postgres_reader(postgres_reader_dyn)
@@ -218,10 +221,11 @@ fn decode_request(headers: &HeaderMap, body: Bytes) -> Result<FlagRequest, FlagE
 // which flags failed to evaluate
 pub async fn evaluate_feature_flags(context: FeatureFlagEvaluationContext) -> FlagsResponse {
     let group_type_mapping_cache =
-        GroupTypeMappingCache::new(context.team_id, context.postgres_reader.clone());
+        GroupTypeMappingCache::new(context.project_id, context.postgres_reader.clone());
     let mut feature_flag_matcher = FeatureFlagMatcher::new(
         context.distinct_id,
         context.team_id,
+        context.project_id,
         context.postgres_reader,
         context.postgres_writer,
         Some(group_type_mapping_cache),
@@ -393,6 +397,7 @@ mod tests {
 
         let evaluation_context = FeatureFlagEvaluationContextBuilder::default()
             .team_id(1)
+            .project_id(1)
             .distinct_id("user123".to_string())
             .feature_flags(feature_flag_list)
             .postgres_reader(postgres_reader)
@@ -552,6 +557,7 @@ mod tests {
 
         let evaluation_context = FeatureFlagEvaluationContextBuilder::default()
             .team_id(1)
+            .project_id(1)
             .distinct_id("user123".to_string())
             .feature_flags(feature_flag_list)
             .postgres_reader(postgres_reader)
@@ -651,6 +657,7 @@ mod tests {
 
         let evaluation_context = FeatureFlagEvaluationContextBuilder::default()
             .team_id(team.id)
+            .project_id(team.project_id)
             .distinct_id("user123".to_string())
             .feature_flags(feature_flag_list)
             .postgres_reader(postgres_reader)
@@ -713,6 +720,7 @@ mod tests {
 
         let evaluation_context = FeatureFlagEvaluationContextBuilder::default()
             .team_id(1)
+            .project_id(1)
             .distinct_id(long_id)
             .feature_flags(feature_flag_list)
             .postgres_reader(postgres_reader)
