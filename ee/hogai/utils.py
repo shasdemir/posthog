@@ -43,10 +43,12 @@ class AssistantNodeName(StrEnum):
     TRENDS_PLANNER_TOOLS = "trends_planner_tools"
     TRENDS_GENERATOR = "trends_generator"
     TRENDS_GENERATOR_TOOLS = "trends_generator_tools"
+    TRENDS_SUMMARIZER = "trends_summarizer"
     FUNNEL_PLANNER = "funnel_planner"
     FUNNEL_PLANNER_TOOLS = "funnel_planner_tools"
     FUNNEL_GENERATOR = "funnel_generator"
     FUNNEL_GENERATOR_TOOLS = "funnel_generator_tools"
+    FUNNEL_SUMMARIZER = "funnel_summarizer"
 
 
 class AssistantNode(ABC):

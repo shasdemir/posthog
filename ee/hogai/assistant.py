@@ -20,6 +20,11 @@ from ee.hogai.trends.nodes import (
     TrendsGeneratorToolsNode,
     TrendsPlannerNode,
     TrendsPlannerToolsNode,
+    CreateTrendsPlanNode,
+    CreateTrendsPlanToolsNode,
+    GenerateTrendsNode,
+    GenerateTrendsToolsNode,
+    SummarizeTrendsNode,
 )
 from ee.hogai.utils import AssistantNodeName, AssistantState, Conversation
 from posthog.models.team.team import Team
@@ -117,9 +122,10 @@ class Assistant:
             generate_trends_node.router,
             path_map={
                 "tools": AssistantNodeName.TRENDS_GENERATOR_TOOLS,
-                "next": AssistantNodeName.END,
+                "next": AssistantNodeName.TRENDS_SUMMARIZER ,
             },
         )
+        builder.add_edge(AssistantNodeName.TRENDS_SUMMARIZER, AssistantNodeName.END)
 
         funnel_planner = FunnelPlannerNode(self._team)
         builder.add_node(AssistantNodeName.FUNNEL_PLANNER, funnel_planner.run)
@@ -154,9 +160,10 @@ class Assistant:
             generate_trends_node.router,
             path_map={
                 "tools": AssistantNodeName.FUNNEL_GENERATOR_TOOLS,
-                "next": AssistantNodeName.END,
+                "next": AssistantNodeName.FUNNEL_SUMMARIZER,
             },
         )
+        builder.add_edge(AssistantNodeName.FUNNEL_SUMMARIZER, AssistantNodeName.END)
 
         return builder.compile()
 
@@ -205,6 +212,12 @@ class Assistant:
                         elif state_update[node_name].get("intermediate_steps", []):
                             yield AssistantGenerationStatusEvent(type=AssistantGenerationStatusType.GENERATION_ERROR)
 
+                    if AssistantNodeName.SUMMARIZE_TRENDS in state_update:
+                        chunks = AIMessageChunk(content="")
+                        message = cast(
+                            VisualizationMessage, state_update[AssistantNodeName.SUMMARIZE_TRENDS]["messages"][0]
+                        )
+                        yield message
             elif is_message_update(update):
                 langchain_message, langgraph_state = update[1]
                 for node_name, viz_node in visualization_nodes.items():
